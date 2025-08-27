@@ -9,10 +9,26 @@ $data = json_decode(file_get_contents($file), true);
 $action = $_GET["action"] ?? null;
 
 if ($action === "register") {
+    // Read JSON input
     $input = json_decode(file_get_contents("php://input"), true);
-    $data["teams"][$input["name"]] = $input["color"];
+    if (!$input || !isset($input['name']) || !isset($input['color'])) {
+        echo json_encode(['status'=>'error','msg'=>'Invalid input']);
+        exit;
+    }
+
+    // Ensure the 'teams' key exists
+    if (!isset($data['teams'])) $data['teams'] = [];
+
+    // Prevent duplicate team names
+    if (isset($data['teams'][$input['name']])) {
+        echo json_encode(['status'=>'error','msg'=>'Team name exists']);
+        exit;
+    }
+
+    // Add new team
+    $data['teams'][$input['name']] = $input['color'];
     file_put_contents($file, json_encode($data));
-    echo json_encode(["status"=>"ok"]);
+    echo json_encode(['status'=>'ok']);
     exit;
 }
 
@@ -52,6 +68,26 @@ if ($action === "status") {
     echo json_encode([
         'resetTime' => $data['resetTime'] ?? 0
     ]);
+    exit;
+}
+
+if ($action === "teams") {
+    $teams = [];
+    if (isset($data['queue'])) {
+        foreach ($data['queue'] as $entry) {
+            if (!in_array($entry['name'], array_column($teams, 'name'))) {
+                $teams[] = ['name'=>$entry['name'], 'color'=>$entry['color']];
+            }
+        }
+    }
+    if (isset($data['teams'])) {
+        foreach ($data['teams'] as $name=>$color) {
+            if (!in_array($name, array_column($teams, 'name'))) {
+                $teams[] = ['name'=>$name, 'color'=>$color];
+            }
+        }
+    }
+    echo json_encode($teams);
     exit;
 }
 

@@ -1,71 +1,127 @@
 let teamName = sessionStorage.getItem("teamName") || null;
 let teamColor = sessionStorage.getItem("teamColor") || null;
 let buzzButton = null;
+let lastResetTime = 0;
 
-document.addEventListener("DOMContentLoaded", () => {
-  const joinForm = document.getElementById("join-form");
-  const teamNameInput = document.getElementById("team-name");
-  const teamColorInput = document.getElementById("team-color");
+document.addEventListener("DOMContentLoaded", async () => {
   buzzButton = document.getElementById("buzz-button");
+  const joinScreen = document.getElementById("join-screen");
+  const buzzScreen = document.getElementById("buzz-screen");
+  const playerNameElem = document.getElementById("player-team-name");
+  const existingTeams = document.getElementById("existing-teams");
+  const newTeamForm = document.getElementById("new-team-form");
 
-  // If session storage has data, skip join screen
+  // Fetch existing teams
+  const resTeams = await fetch("/functions.php?action=teams");
+  const teams = await resTeams.json();
+  teams.forEach(t => {
+    const opt = document.createElement("option");
+    opt.value = t.name;
+    opt.dataset.color = t.color;
+    opt.textContent = t.name;
+    existingTeams.appendChild(opt);
+  });
+
+  // Preselect existing team if session storage exists
   if (teamName && teamColor) {
-    document.getElementById("join-screen").style.display = "none";
-    document.getElementById("buzz-screen").style.display = "block";
-    document.getElementById("player-team-name").innerText = teamName;
-
-    teamNameInput.value = teamName;
-    teamColorInput.value = teamColor;
+    joinScreen.style.display = "none";
+    buzzScreen.style.display = "block";
+    playerNameElem.textContent = teamName;
   }
 
-  // Join form submission
-  joinForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    teamName = teamNameInput.value.trim();
-    teamColor = teamColorInput.value;
+  // Show/hide new team form based on selection
+  existingTeams.addEventListener("change", () => {
+    if (existingTeams.value) {
+      newTeamForm.style.display = "none";
+    } else {
+      newTeamForm.style.display = "block";
+    }
+  });
 
-    if (!teamName || !teamColor) return;
+  // Join button
+  document.getElementById("join-button").addEventListener("click", async () => {
+    if (existingTeams.value) {
+      teamName = existingTeams.value;
+      teamColor = existingTeams.selectedOptions[0].dataset.color;
+    } else {
+      teamName = document.getElementById("team-name").value.trim();
+      teamColor = document.getElementById("team-color").value;
+      if (!teamName || !teamColor) return;
+
+      // Register new team
+      await fetch("/functions.php?action=register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: teamName, color: teamColor })
+      });
+    }
 
     // Save to session storage
     sessionStorage.setItem("teamName", teamName);
     sessionStorage.setItem("teamColor", teamColor);
 
-    // Register team in backend
-    await fetch("/functions.php?action=register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: teamName, color: teamColor })
-    });
-
-    // Switch to buzz screen
-    document.getElementById("join-screen").style.display = "none";
-    document.getElementById("buzz-screen").style.display = "block";
-    document.getElementById("player-team-name").innerText = teamName;
+    joinScreen.style.display = "none";
+    buzzScreen.style.display = "block";
+    playerNameElem.textContent = teamName;
   });
 
-  // Buzz button click
-  buzzButton.addEventListener("click", async () => {
+    // Buzz button
+    buzzButton.addEventListener("click", async () => {
     buzzButton.disabled = true;
 
-    await fetch("/functions.php?action=buzz", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: teamName, color: teamColor })
+    await fetch("/functions.php?action=buzz", {  // ✅ Correct
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: teamName, color: teamColor })
     });
-  });
+    });
 
-  let lastResetTime = 0; // track last reset seen
-
-    setInterval(async () => {
-    if (!teamName) return;
-
+  // Poll reset
+  setInterval(async () => {
     const res = await fetch("/functions.php?action=status");
     const data = await res.json();
 
-    // If the resetTime is newer than last seen, enable button
     if (data.resetTime && data.resetTime > lastResetTime) {
-        buzzButton.disabled = false;
-        lastResetTime = data.resetTime;
+      buzzButton.disabled = false;
+      lastResetTime = data.resetTime;
     }
-    }, 2000);
+  }, 2000);
+});
+
+document.getElementById("join-button").addEventListener("click", async () => {
+  if (existingTeams.value) {
+    teamName = existingTeams.value;
+    teamColor = existingTeams.selectedOptions[0].dataset.color;
+  } else {
+    teamName = document.getElementById("team-name").value.trim();
+    teamColor = document.getElementById("team-color").value;
+    if (!teamName || !teamColor) return;
+
+    // Register new team
+    const res = await fetch("/functions.php?action=register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: teamName, color: teamColor })
+    });
+    const result = await res.json();
+    if (result.status !== "ok") {
+      alert(result.msg || "Error registering team");
+      return;
+    }
+
+    // Add the new team to existing teams dropdown for others
+    const opt = document.createElement("option");
+    opt.value = teamName;
+    opt.dataset.color = teamColor;
+    opt.textContent = teamName;
+    existingTeams.appendChild(opt);
+  }
+
+  // Save to session storage
+  sessionStorage.setItem("teamName", teamName);
+  sessionStorage.setItem("teamColor", teamColor);
+
+  joinScreen.style.display = "none";
+  buzzScreen.style.display = "block";
+  playerNameElem.textContent = teamName;
 });

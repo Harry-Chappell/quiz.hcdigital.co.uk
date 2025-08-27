@@ -1,0 +1,16 @@
+[27-Aug-2025 22:59:21 Europe/London] PHP Fatal error:  Uncaught Error: Failed opening required '/home/quizhcdigital/public_html/../functions.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/quizhcdigital/public_html/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/quizhcdigital/public_html/index.php on line 3
+[27-Aug-2025 22:59:23 Europe/London] PHP Fatal error:  Uncaught Error: Failed opening required '/home/quizhcdigital/public_html/../functions.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/quizhcdigital/public_html/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/quizhcdigital/public_html/index.php on line 3
+[27-Aug-2025 22:59:23 Europe/London] PHP Fatal error:  Uncaught Error: Failed opening required '/home/quizhcdigital/public_html/../functions.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/quizhcdigital/public_html/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/quizhcdigital/public_html/index.php on line 3
+[27-Aug-2025 23:00:13 Europe/London] PHP Fatal error:  Uncaught Error: Failed opening required '/home/quizhcdigital/public_html/../functions.php' (include_path='.:/opt/alt/php83/usr/share/pear:/opt/alt/php83/usr/share/php:/usr/share/pear:/usr/share/php') in /home/quizhcdigital/public_html/index.php:3
+Stack trace:
+#0 {main}
+  thrown in /home/quizhcdigital/public_html/index.php on line 3

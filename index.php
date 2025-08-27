@@ -1,5 +1,3 @@
-<?php
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,10 +8,16 @@
 <body>
   <div id="join-screen">
     <h2>Join the Quiz</h2>
-    <form id="join-form">
-      <input type="text" id="team-name" placeholder="Team Name" required>
+    
+    <label for="existing-teams">Or pick an existing team:</label>
+    <select id="existing-teams">
+      <option value="">--Create New Team--</option>
+    </select>
+
+    <div id="new-team-form">
+      <input type="text" id="team-name" placeholder="Team Name">
       <label for="team-color">Pick a colour:</label>
-      <select id="team-color" required>
+      <select id="team-color">
         <option value="">--Choose--</option>
         <option value="#e74c3c">Red</option>
         <option value="#3498db">Blue</option>
@@ -22,8 +26,9 @@
         <option value="#9b59b6">Purple</option>
         <option value="#e67e22">Orange</option>
       </select>
-      <button type="submit">Join</button>
-    </form>
+    </div>
+
+    <button id="join-button">Join</button>
   </div>
 
   <div id="buzz-screen" style="display:none;">
