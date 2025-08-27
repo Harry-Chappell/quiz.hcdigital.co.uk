@@ -1,13 +1,20 @@
-<?php include '../functions.php'; ?>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Buzz Queue Display</title>
-  <link rel="stylesheet" href="../style.css">
+  <meta charset="UTF-8">
+  <title>Quiz Display</title>
+  <link rel="stylesheet" href="/style.css">
   <style>
-    body { text-align: center; font-size: 2em; }
-    .first { color: green; font-weight: bold; }
-    .others { color: gray; }
+    .team-box {
+      border: 4px solid var(--team-color, #000);
+      padding: 1rem;
+      margin: 1rem;
+      border-radius: 10px;
+      font-size: 1.5rem;
+      display: inline-block;
+      min-width: 200px;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -15,28 +22,27 @@
   <div id="queue"></div>
 
   <script>
-    async function fetchQueue() {
-      const res = await fetch('../functions.php?action=get');
+    async function loadQueue() {
+      const res = await fetch("/functions.php?action=queue");
       const data = await res.json();
-      const queueDiv = document.getElementById('queue');
 
-      if (data.length === 0) {
-        queueDiv.innerHTML = "<p>No buzzers yet</p>";
-        return;
-      }
+      const queueDiv = document.getElementById("queue");
+      queueDiv.innerHTML = "";
 
-      let firstTime = data[0].time;
-      let html = "<ol>";
-      data.forEach((b, i) => {
-        let delay = (b.time - firstTime).toFixed(3);
-        let delayText = i === 0 ? " (FIRST)" : ` (+${delay}s)`;
-        html += `<li class="${i===0?'first':'others'}">${b.team} ${delayText}</li>`;
+      data.forEach((entry, i) => {
+        const div = document.createElement("div");
+        div.className = "team-box";
+        div.style.setProperty("--team-color", entry.color);
+        div.innerHTML = `
+          <strong>${i+1}. ${entry.name}</strong><br>
+          <small>Delay: ${entry.delay.toFixed(2)}s</small>
+        `;
+        queueDiv.appendChild(div);
       });
-      html += "</ol>";
-      queueDiv.innerHTML = html;
     }
 
-    setInterval(fetchQueue, 500);
+    setInterval(loadQueue, 1000);
+    loadQueue();
   </script>
 </body>
 </html>

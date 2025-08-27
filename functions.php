@@ -1,57 +1,58 @@
 <?php
-// Path to JSON file
-$json_file = __DIR__ . '/buzzers.json';
+header("Content-Type: application/json");
 
-// Read JSON
-function read_buzzers() {
-    global $json_file;
-    if (!file_exists($json_file)) {
-        file_put_contents($json_file, json_encode([]));
-    }
-    $data = json_decode(file_get_contents($json_file), true);
-    return $data ?: [];
+$file = __DIR__ . "/queue.json";
+if (!file_exists($file)) file_put_contents($file, json_encode(["queue"=>[], "reset"=>false]));
+
+$data = json_decode(file_get_contents($file), true);
+
+$action = $_GET["action"] ?? null;
+
+if ($action === "register") {
+    $input = json_decode(file_get_contents("php://input"), true);
+    $data["teams"][$input["name"]] = $input["color"];
+    file_put_contents($file, json_encode($data));
+    echo json_encode(["status"=>"ok"]);
+    exit;
 }
 
-// Write JSON
-function write_buzzers($data) {
-    global $json_file;
-    file_put_contents($json_file, json_encode($data, JSON_PRETTY_PRINT));
-}
+if ($action === "buzz") {
+    $input = json_decode(file_get_contents("php://input"), true);
+    $now = microtime(true);
 
-// Add a buzz
-if (isset($_POST['action']) && $_POST['action'] === 'buzz') {
-    $team = $_POST['team'] ?? 'Unknown';
-    $buzzers = read_buzzers();
+    // First buzz time
+    if (!isset($data["first"])) $data["first"] = $now;
+    $delay = $now - $data["first"];
 
-    // Check if already buzzed
-    foreach ($buzzers as $b) {
-        if ($b['team'] === $team) {
-            echo json_encode(['status' => 'duplicate']);
-            exit;
-        }
-    }
-
-    // Add buzz with timestamp
-    $buzzers[] = [
-        'team' => $team,
-        'time' => microtime(true)
+    $data["queue"][] = [
+        "name"=>$input["name"],
+        "color"=>$input["color"],
+        "delay"=>$delay
     ];
-    write_buzzers($buzzers);
-
-    echo json_encode(['status' => 'ok']);
+    file_put_contents($file, json_encode($data));
+    echo json_encode(["status"=>"buzzed"]);
     exit;
 }
 
-// Reset queue
-if (isset($_POST['action']) && $_POST['action'] === 'reset') {
-    write_buzzers([]);
-    echo json_encode(['status' => 'reset']);
+if ($action === "queue") {
+    echo json_encode($data["queue"] ?? []);
     exit;
 }
 
-// Fetch buzzers
-if (isset($_GET['action']) && $_GET['action'] === 'get') {
-    echo json_encode(read_buzzers());
+if ($action === "reset") {
+    $data['queue'] = [];
+    $data['resetTime'] = microtime(true); // store timestamp
+    file_put_contents($file, json_encode($data));
+    echo json_encode(["status"=>"reset"]);
     exit;
 }
-?>
+
+if ($action === "status") {
+    // send current resetTime
+    echo json_encode([
+        'resetTime' => $data['resetTime'] ?? 0
+    ]);
+    exit;
+}
+
+echo json_encode(["error"=>"unknown action"]);
