@@ -80,3 +80,6 @@ button {
   background-color: var(--button-bg);
   color: var(--button-text);
 }
+
+.first-buzz { background: #dff0d8; }
+.buzzed { background: #f9f9f9; opacity: 0.8; }

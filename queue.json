@@ -1,1 +1,1 @@
-{"queue":[],"reset":false,"resetTime":1756333116.117919,"first":1756332484.974626,"teams":{"chrome":"#e74c3c","safari":"#2ecc71"}}
+{"teams":{"saf":{"color":"#2ecc71","score":0},"chr":{"color":"#2ecc71","score":0}},"queue":[{"name":"chr","color":"#2ecc71","time":1756334621.366509,"delay":0},{"name":"saf","color":"#2ecc71","time":1756334630.892887,"delay":9.526378154754639}],"firstBuzzTime":1756334621.366509,"resetTime":1756334609.97484}
