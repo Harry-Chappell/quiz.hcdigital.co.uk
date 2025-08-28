@@ -34,6 +34,9 @@
 <button id="buzz-button">BUZZ!</button>
 </div>
 
+<div id="buzz-result" style="margin-top:10px;font-size:1.1rem;"></div>
+<button id="logout-button" type="button">Log out</button>
+
 <script src="/scripts.js"></script>
 </body>
 </html>
