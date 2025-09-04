@@ -13,7 +13,15 @@
     <h2>Or Create a New Team</h2>
     <form id="create-team-form">
       <input type="text" id="new-team-name" placeholder="Team name" required>
-      <select id="new-team-colour" required></select>
+
+      <h3>Pick a Colour</h3>
+      <ul id="colour-list" class="option-list"></ul>
+      <input type="hidden" id="selected-colour" name="colour" required>
+
+      <h3>Pick a Sound</h3>
+      <ul id="sound-list" class="option-list"></ul>
+      <input type="hidden" id="selected-sound" name="sound" required>
+
       <button type="submit">Create Team</button>
     </form>
   </div>

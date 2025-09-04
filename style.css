@@ -83,3 +83,24 @@ button {
 
 .first-buzz { background: #dff0d8; }
 .buzzed { background: #f9f9f9; opacity: 0.8; }
+
+
+
+.option-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  list-style: none;
+  padding: 0;
+}
+.option-list li {
+  cursor: pointer;
+  padding: 6px 10px;
+  border: 2px solid transparent;
+  border-radius: 6px;
+  user-select: none;
+}
+.option-list li.selected {
+  border-color: black;
+  font-weight: bold;
+}

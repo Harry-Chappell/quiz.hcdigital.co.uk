@@ -18,28 +18,26 @@ function save_state($file, $data) {
     file_put_contents($file, json_encode($data));
 }
 
-/* ---------------- Register a team ---------------- */
 if ($action === "register") {
     $input = json_decode(file_get_contents("php://input"), true);
-    if (!$input || !isset($input['name']) || !isset($input['color'])) {
+    if (!$input || !isset($input['name']) || !isset($input['color']) || !isset($input['sound'])) {
         echo json_encode(['status'=>'error','msg'=>'Invalid input']); exit;
     }
 
     $name  = trim($input['name']);
     $color = strtolower(trim($input['color']));
+    $sound = trim($input['sound']);
 
-    if ($name === '' || $color === '') {
-        echo json_encode(['status'=>'error','msg'=>'Empty name or color']); exit;
+    if ($name === '' || $color === '' || $sound === '') {
+        echo json_encode(['status'=>'error','msg'=>'Empty name, color or sound']); exit;
     }
-
-    if (!isset($data['teams'])) $data['teams'] = [];
 
     // Unique name
     if (isset($data['teams'][$name])) {
         echo json_encode(['status'=>'error','msg'=>'Team name already exists']); exit;
     }
 
-    // Unique color (exact match)
+    // Unique color
     foreach ($data['teams'] as $n => $info) {
         if (strtolower($info['color']) === $color) {
             echo json_encode(['status'=>'error','msg'=>'That colour is already taken']); exit;
@@ -48,10 +46,11 @@ if ($action === "register") {
 
     $data['teams'][$name] = [
         "color" => $color,
+        "sound" => $sound,
         "score" => 0
     ];
 
-    file_put_contents($file, json_encode($data));
+    save_state($file, $data);
     echo json_encode(['status'=>'ok']); exit;
 }
 

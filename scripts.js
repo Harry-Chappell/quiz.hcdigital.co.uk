@@ -1,15 +1,17 @@
-// scripts.js — cleaned, single-source-of-truth version for index.php
+// scripts.js — cleaned, with colour+sound list selectors
 
 // --- Session state ---
 let teamName  = sessionStorage.getItem("teamName")  || null;
 let teamColor = sessionStorage.getItem("teamColor") || null;
+let teamSound = sessionStorage.getItem("teamSound") || null;
 let lastResetTime = 0;
 
 // --- DOM refs (will be set on DOMContentLoaded) ---
-let loginScreen, buzzScreen, teamListEl, createForm, newTeamNameEl, newTeamColEl;
+let loginScreen, buzzScreen, teamListEl, createForm, newTeamNameEl;
+let colourListEl, soundListEl, selectedColourEl, selectedSoundEl;
 let buzzBtn, buzzFeedbackEl, logoutBtn, teamInfoEl;
 
-// --- Colour palette (hex) ---
+// --- Colour palette ---
 const PALETTE = [
   { label: "Red",    value: "#e53935" },
   { label: "Blue",   value: "#1e88e5" },
@@ -19,6 +21,15 @@ const PALETTE = [
   { label: "Orange", value: "#fb8c00" },
   { label: "Teal",   value: "#00acc1" },
   { label: "Indigo", value: "#5e35b1" }
+];
+
+// --- Sound palette ---
+const SOUNDS = [
+  "Beep",
+  "Boop",
+  "Clap",
+  "Horn",
+  "Laser"
 ];
 
 // ---------- helpers ----------
@@ -37,7 +48,7 @@ function showLoginScreen() {
 async function fetchTeams() {
   const res = await fetch("/functions.php?action=teams", {cache: "no-store"});
   if (!res.ok) throw new Error("Failed to load teams");
-  return await res.json(); // array [{name,color,score}, ...]
+  return await res.json(); // array [{name,color,sound,score}, ...]
 }
 
 function renderTeamList(teams) {
@@ -65,12 +76,13 @@ function renderTeamList(teams) {
     btn.addEventListener("click", () => {
       sessionStorage.setItem("teamName", t.name);
       sessionStorage.setItem("teamColor", t.color);
+      sessionStorage.setItem("teamSound", t.sound || "");
       teamName = t.name;
       teamColor = t.color;
+      teamSound = t.sound || null;
       showBuzzScreen();
     });
 
-    // Mark if this is your team
     if (teamName && teamName === t.name) {
       li.style.fontWeight = "700";
     }
@@ -80,30 +92,63 @@ function renderTeamList(teams) {
   });
 }
 
+// --- Colour list renderer ---
 function renderColourOptions(teams) {
-  // teams: array of {name,color,score}
   const taken = new Set(teams.map(t => String(t.color).toLowerCase()));
-  const previous = newTeamColEl.value;
-  newTeamColEl.innerHTML = "";
-  let availableCount = 0;
+  colourListEl.innerHTML = "";
 
   PALETTE.forEach(c => {
-    if (!taken.has(c.value.toLowerCase())) {
-      const opt = document.createElement("option");
-      opt.value = c.value;
-      opt.textContent = c.label;
-      newTeamColEl.appendChild(opt);
-      availableCount++;
+    const li = document.createElement("li");
+    li.textContent = c.label;
+    li.style.background = c.value;
+    li.style.color = "#fff";
+    li.dataset.value = c.value;
+
+    if (taken.has(c.value.toLowerCase())) {
+      li.style.opacity = 0.4;
+      li.style.pointerEvents = "none";
     }
+
+    if (selectedColourEl.value === c.value) {
+      li.classList.add("selected");
+    }
+
+    li.addEventListener("click", () => {
+      selectedColourEl.value = c.value;
+      document.querySelectorAll("#colour-list li").forEach(el => el.classList.remove("selected"));
+      li.classList.add("selected");
+    });
+
+    colourListEl.appendChild(li);
   });
 
-  // restore previous selection if still available
-  if (previous && [...newTeamColEl.options].some(o => o.value.toLowerCase() === previous.toLowerCase())) {
-    newTeamColEl.value = previous;
-  }
-
   // disable create if no colours left
-  createForm.querySelector('button[type="submit"]').disabled = availableCount === 0;
+  const createBtn = createForm.querySelector('button[type="submit"]');
+  if (createBtn) {
+    createBtn.disabled = [...colourListEl.querySelectorAll("li")].every(li => li.style.pointerEvents === "none");
+  }
+}
+
+// --- Sound list renderer ---
+function renderSoundOptions() {
+  soundListEl.innerHTML = "";
+  SOUNDS.forEach(s => {
+    const li = document.createElement("li");
+    li.textContent = s;
+    li.dataset.value = s;
+
+    if (selectedSoundEl.value === s) {
+      li.classList.add("selected");
+    }
+
+    li.addEventListener("click", () => {
+      selectedSoundEl.value = s;
+      document.querySelectorAll("#sound-list li").forEach(el => el.classList.remove("selected"));
+      li.classList.add("selected");
+    });
+
+    soundListEl.appendChild(li);
+  });
 }
 
 // refresh login UI
@@ -112,12 +157,11 @@ async function refreshLoginUI() {
     const teams = await fetchTeams();
     renderTeamList(teams);
     renderColourOptions(teams);
+    renderSoundOptions();
 
-    // If currently logged in, ensure our team still exists
     if (teamName) {
       const stillExists = teams.some(t => t.name === teamName);
       if (!stillExists) {
-        // team was removed by admin — force logout
         alert("Your team has been removed by the admin.");
         doLogout();
       }
@@ -131,6 +175,7 @@ function doLogout() {
   sessionStorage.clear();
   teamName = null;
   teamColor = null;
+  teamSound = null;
   showLoginScreen();
   refreshLoginUI();
 }
@@ -138,19 +183,22 @@ function doLogout() {
 // ---------- DOM ready ----------
 document.addEventListener("DOMContentLoaded", () => {
   // DOM refs
-  loginScreen   = document.getElementById("login-screen");
-  buzzScreen    = document.getElementById("buzzer-screen");
-  teamListEl    = document.getElementById("team-list");
-  createForm    = document.getElementById("create-team-form");
-  newTeamNameEl = document.getElementById("new-team-name");
-  newTeamColEl  = document.getElementById("new-team-colour");
-  buzzBtn       = document.getElementById("buzz-button");
-  buzzFeedbackEl= document.getElementById("buzz-feedback");
-  logoutBtn     = document.getElementById("logout-button");
-  teamInfoEl    = document.getElementById("team-info");
+  loginScreen      = document.getElementById("login-screen");
+  buzzScreen       = document.getElementById("buzzer-screen");
+  teamListEl       = document.getElementById("team-list");
+  createForm       = document.getElementById("create-team-form");
+  newTeamNameEl    = document.getElementById("new-team-name");
+  colourListEl     = document.getElementById("colour-list");
+  soundListEl      = document.getElementById("sound-list");
+  selectedColourEl = document.getElementById("selected-colour");
+  selectedSoundEl  = document.getElementById("selected-sound");
+  buzzBtn          = document.getElementById("buzz-button");
+  buzzFeedbackEl   = document.getElementById("buzz-feedback");
+  logoutBtn        = document.getElementById("logout-button");
+  teamInfoEl       = document.getElementById("team-info");
 
-  // Ensure required elements exist
-  if (!teamListEl || !createForm || !newTeamNameEl || !newTeamColEl || !buzzBtn || !buzzFeedbackEl || !logoutBtn || !teamInfoEl) {
+  if (!teamListEl || !createForm || !newTeamNameEl || !colourListEl || !soundListEl ||
+      !selectedColourEl || !selectedSoundEl || !buzzBtn || !buzzFeedbackEl || !logoutBtn || !teamInfoEl) {
     console.error("Missing expected DOM elements. Check your index.php IDs.");
     return;
   }
@@ -159,27 +207,28 @@ document.addEventListener("DOMContentLoaded", () => {
   createForm.addEventListener("submit", async (ev) => {
     ev.preventDefault();
     const name = newTeamNameEl.value.trim();
-    const color = newTeamColEl.value;
-    if (!name || !color) return;
+    const color = selectedColourEl.value;
+    const sound = selectedSoundEl.value;
+    if (!name || !color || !sound) return;
 
     try {
       const res = await fetch("/functions.php?action=register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, color })
+        body: JSON.stringify({ name, color, sound })
       });
       const data = await res.json();
       if (data.status !== "ok") {
         alert(data.msg || "Error creating team");
         return;
       }
-      // success: store and show buzzer
       sessionStorage.setItem("teamName", name);
       sessionStorage.setItem("teamColor", color);
+      sessionStorage.setItem("teamSound", sound);
       teamName = name;
       teamColor = color;
+      teamSound = sound;
       showBuzzScreen();
-      // refresh team list so everyone sees it quickly
       refreshLoginUI();
     } catch (err) {
       console.error("Create team error", err);
@@ -196,16 +245,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/functions.php?action=buzz", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: teamName, color: teamColor })
+        body: JSON.stringify({ name: teamName, color: teamColor, sound: teamSound })
       });
       const data = await res.json();
 
-      // flash the team color briefly
       buzzScreen.style.transition = "background-color 0.15s";
       buzzScreen.style.backgroundColor = teamColor;
       setTimeout(() => (buzzScreen.style.backgroundColor = ""), 400);
 
-      // show server result
       if (data.first) {
         buzzFeedbackEl.textContent = "✅ You buzzed FIRST!";
         buzzFeedbackEl.style.color = "green";
@@ -220,39 +267,35 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Buzz error", err);
       buzzFeedbackEl.textContent = "Error sending buzz";
       buzzFeedbackEl.style.color = "orange";
-      buzzBtn.disabled = false; // allow retry
+      buzzBtn.disabled = false;
     }
   });
 
   // Manual logout button
   logoutBtn.addEventListener("click", () => doLogout());
 
-  // Boot: show correct screen
+  // Boot
   if (teamName && teamColor) {
     showBuzzScreen();
   } else {
     showLoginScreen();
   }
 
-  // Live refresh list every 3s (and initial load)
   refreshLoginUI();
   setInterval(refreshLoginUI, 3000);
 
-  // Poll status every 1s to detect resets + re-enable buzz buttons
   setInterval(async () => {
     try {
       const res = await fetch("/functions.php?action=status", {cache: "no-store"});
       if (!res.ok) return;
       const s = await res.json();
 
-      // If reset time advanced, re-enable buzz
       if (s.resetTime && s.resetTime > lastResetTime) {
         lastResetTime = s.resetTime;
         buzzBtn.disabled = false;
         buzzFeedbackEl.textContent = "";
       }
 
-      // Also ensure logged-in user's team still exists (extra safety)
       if (teamName && Array.isArray(s.teams)) {
         const stillExists = s.teams.some(t => t.name === teamName);
         if (!stillExists) {
