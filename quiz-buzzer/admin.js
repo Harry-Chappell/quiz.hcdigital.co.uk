@@ -48,14 +48,22 @@ async function deleteTeam(name){
     loadTeams();
 }
 
-// Reset buzzers
-document.addEventListener('DOMContentLoaded', ()=>{
-    document.getElementById('reset').addEventListener('click',async()=>{
-        await fetch(REST_BASE + 'reset',{method:'POST'});
-        loadTeams();
-    });
-
+// Reset buzzers + initialization helper
+function initAdminUI(){
+    const resetBtn = document.getElementById('reset');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', async ()=>{
+            await fetch(REST_BASE + 'reset', {method:'POST'});
+            loadTeams();
+        });
+    }
     loadTeams();
     // optional auto-refresh
     // setInterval(loadTeams,5000);
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAdminUI);
+} else {
+    initAdminUI();
+}

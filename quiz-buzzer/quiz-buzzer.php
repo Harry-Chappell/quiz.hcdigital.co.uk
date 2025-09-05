@@ -17,9 +17,11 @@ class Quiz_Buzzer_Plugin {
     public function __construct() {
         add_action('admin_menu', [$this, 'admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
-        add_action('rest_api_init', [$this, 'register_rest_routes']);
-        add_shortcode('quiz_buzzer', [$this, 'shortcode_buzzer']);
-        add_shortcode('quiz_display', [$this, 'shortcode_display']);
+    add_action('rest_api_init', [$this, 'register_rest_routes']);
+    add_shortcode('quiz_buzzer', [$this, 'shortcode_buzzer']);
+    add_shortcode('quiz_display', [$this, 'shortcode_display']);
+    // admin UI can be rendered as shortcode on a page
+    add_shortcode('quiz_admin', [$this, 'shortcode_admin']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
         register_activation_hook(__FILE__, [$this, 'on_activate']);
 
@@ -43,10 +45,8 @@ class Quiz_Buzzer_Plugin {
     }
 
     public function admin_menu() {
-    // Top-level admin page for managing teams and scoring
-    $hook = add_menu_page('Quiz Buzzer Admin', 'Quiz Buzzer', 'manage_options', 'quiz-buzzer-admin', [$this, 'admin_page']);
-    // Settings as a submenu
-    add_submenu_page('quiz-buzzer-admin', 'Settings', 'Settings', 'manage_options', 'quiz-buzzer', [$this, 'settings_page']);
+    // Register settings page under Settings -> Quiz Buzzer (remove top-level admin UI)
+    add_options_page('Quiz Buzzer', 'Quiz Buzzer', 'manage_options', 'quiz-buzzer', [$this, 'settings_page']);
     }
 
     public function register_settings() {
@@ -81,21 +81,49 @@ class Quiz_Buzzer_Plugin {
     }
 
     public function settings_page() {
+        // Simplified settings page: inputs removed. Admin UI is available via shortcode [quiz_admin]
+        $opt = get_option($this->option_name, []);
+        $rest = isset($opt['rest_base']) ? $opt['rest_base'] : 'quiz/v1';
         ?>
         <div class="wrap">
             <h1>Quiz Buzzer Settings</h1>
-            <form method="post" action="options.php">
-                <?php
-                settings_fields($this->option_name);
-                do_settings_sections($this->option_name);
-                submit_button();
-                ?>
-            </form>
-            <h2>Useful links</h2>
-            <p>Shortcodes: <code>[quiz_buzzer]</code> and <code>[quiz_display]</code></p>
-            <p>REST base: <code><?php echo esc_html(get_option($this->option_name)['rest_base'] ?? 'quiz/v1'); ?></code></p>
+            <p>The settings inputs have been removed. Use the admin UI shortcode to manage teams and scoring.</p>
+            <p>Place the admin UI on any page using the shortcode: <code>[quiz_admin]</code></p>
+            <h2>Shortcodes</h2>
+            <ul>
+              <li><code>[quiz_buzzer]</code> — competitor/buzzer UI</li>
+              <li><code>[quiz_display]</code> — live display</li>
+              <li><code>[quiz_admin]</code> — admin panel (place on a page)</li>
+            </ul>
+            <p>Current REST base: <code><?php echo esc_html($rest); ?></code> (full URL: <?php echo esc_html(rest_url($rest . '/')); ?>)</p>
         </div>
         <?php
+    }
+
+    // Shortcode that renders the admin UI on a front-end page (visible to admins)
+    public function shortcode_admin($atts) {
+        if (!current_user_can('manage_options')) return '<p>Insufficient permissions.</p>';
+        // ensure admin script is available and localized
+        $plugin_url = plugin_dir_url(__FILE__);
+        $plugin_path = plugin_dir_path(__FILE__);
+        if (!wp_script_is('quiz-buzzer-admin', 'registered')) {
+            wp_register_script('quiz-buzzer-admin', $plugin_url . 'admin.js', [], filemtime($plugin_path . 'admin.js'), true);
+            $opt = get_option($this->option_name, []);
+            $rest = isset($opt['rest_base']) ? $opt['rest_base'] : 'quiz/v1';
+            wp_localize_script('quiz-buzzer-admin', 'QuizBuzzerConfig', [ 'restBase' => rest_url($rest . '/') ]);
+        }
+        wp_enqueue_script('quiz-buzzer-admin');
+        wp_enqueue_style('quiz-buzzer-style');
+        ob_start();
+        ?>
+        <div id="quiz-buzzer-admin-shortcode">
+            <h2>Quiz Buzzer — Admin</h2>
+            <p><button id="reset" class="button">Reset Buzzers</button></p>
+            <h2>Teams List</h2>
+            <div id="team-list"></div>
+        </div>
+        <?php
+        return ob_get_clean();
     }
 
     public function admin_page() {
@@ -306,6 +334,8 @@ class Quiz_Buzzer_Plugin {
         $plugin_path = plugin_dir_path(__FILE__);
         wp_register_script('quiz-buzzer-public', $plugin_url . 'public.js', [], filemtime($plugin_path . 'public.js'), true);
         wp_register_script('quiz-buzzer-display', $plugin_url . 'display.js', [], filemtime($plugin_path . 'display.js'), true);
+    // register admin script so front-end shortcode can enqueue it
+    wp_register_script('quiz-buzzer-admin', $plugin_url . 'admin.js', [], filemtime($plugin_path . 'admin.js'), true);
         wp_register_style('quiz-buzzer-style', $plugin_url . 'style.css', [], filemtime($plugin_path . 'style.css'));
 
         $opt = get_option($this->option_name, []);
@@ -314,6 +344,9 @@ class Quiz_Buzzer_Plugin {
             'restBase' => rest_url($base . '/')
         ]);
         wp_localize_script('quiz-buzzer-display', 'QuizBuzzerConfig', [
+            'restBase' => rest_url($base . '/')
+        ]);
+        wp_localize_script('quiz-buzzer-admin', 'QuizBuzzerConfig', [
             'restBase' => rest_url($base . '/')
         ]);
     }
