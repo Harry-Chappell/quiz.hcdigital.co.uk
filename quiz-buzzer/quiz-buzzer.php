@@ -365,6 +365,11 @@ class Quiz_Buzzer_Plugin {
           <div id="buzz-feedback"></div>
           <button id="logout-button">Logout</button>
         </div>
+        
+                <div id="current-standings-root">
+                    <h2>Current Standings</h2>
+                    <ol id="current-standings"></ol>
+                </div>
         <?php
         return ob_get_clean();
     }

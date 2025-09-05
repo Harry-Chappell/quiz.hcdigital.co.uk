@@ -11,7 +11,7 @@ let lastResetTime = 0;
 // DOM refs
 let loginScreen, buzzScreen, teamListEl, createForm, newTeamNameEl;
 let colourListEl, soundListEl, selectedColourEl, selectedSoundEl;
-let buzzBtn, buzzFeedbackEl, logoutBtn, teamInfoEl;
+let buzzBtn, buzzFeedbackEl, logoutBtn, teamInfoEl, standingsEl;
 
 const DEFAULT_PALETTE = [
   { label: "Red",    value: "#e53935" },
@@ -134,12 +134,54 @@ function renderSoundOptions() {
   });
 }
 
+function renderStandings(teams) {
+  if (!standingsEl) return;
+  // sort by score descending
+  const sorted = Array.isArray(teams) ? teams.slice().sort((a,b) => (b.score||0) - (a.score||0)) : [];
+  standingsEl.innerHTML = '';
+  sorted.forEach(t => {
+    const li = document.createElement('li');
+    li.style.display = 'flex';
+    li.style.alignItems = 'center';
+    li.style.gap = '8px';
+    li.style.margin = '4px 0';
+
+    const swatch = document.createElement('span');
+    swatch.style.width = '16px';
+    swatch.style.height = '16px';
+    swatch.style.borderRadius = '3px';
+    swatch.style.background = t.color || '#999';
+    swatch.style.display = 'inline-block';
+    swatch.style.border = '1px solid rgba(0,0,0,0.15)';
+
+    const label = document.createElement('span');
+    label.textContent = `${t.name}`;
+
+    const score = document.createElement('span');
+    score.textContent = String(t.score ?? 0);
+    score.style.marginLeft = 'auto';
+    score.style.fontWeight = '600';
+
+    if (teamName && teamName === t.name) {
+      li.style.background = 'rgba(255,255,0,0.08)';
+      li.style.borderRadius = '4px';
+      label.style.fontWeight = '700';
+    }
+
+    li.appendChild(swatch);
+    li.appendChild(label);
+    li.appendChild(score);
+    standingsEl.appendChild(li);
+  });
+}
+
 async function refreshLoginUI() {
   try {
     const teams = await fetchTeams();
-    renderTeamList(teams);
-    renderColourOptions(teams);
-    renderSoundOptions();
+  renderTeamList(teams);
+  renderColourOptions(teams);
+  renderSoundOptions();
+  renderStandings(teams);
     if (teamName) {
       const stillExists = teams.some(t => t.name === teamName);
       if (!stillExists) {
@@ -184,6 +226,7 @@ document.addEventListener('DOMContentLoaded', () => {
   buzzFeedbackEl   = document.getElementById('buzz-feedback');
   logoutBtn        = document.getElementById('logout-button');
   teamInfoEl       = document.getElementById('team-info');
+  standingsEl      = document.getElementById('current-standings');
 
   if (!teamListEl || !createForm || !newTeamNameEl || !colourListEl || !soundListEl || !selectedColourEl || !selectedSoundEl || !buzzBtn || !buzzFeedbackEl || !logoutBtn || !teamInfoEl) {
     console.error('Missing expected DOM elements.'); return;
