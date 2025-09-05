@@ -18,6 +18,9 @@ class Quiz_Buzzer_Plugin {
         add_action('admin_menu', [$this, 'admin_menu']);
         add_action('admin_init', [$this, 'register_settings']);
     add_action('rest_api_init', [$this, 'register_rest_routes']);
+    // ajax endpoints for settings
+    add_action('wp_ajax_quiz_buzzer_update_config', [$this, 'ajax_update_config']);
+    add_action('wp_ajax_quiz_buzzer_get_config', [$this, 'ajax_get_config']);
     add_shortcode('quiz_buzzer', [$this, 'shortcode_buzzer']);
     add_shortcode('quiz_display', [$this, 'shortcode_display']);
     // admin UI can be rendered as shortcode on a page
@@ -84,20 +87,57 @@ class Quiz_Buzzer_Plugin {
         // Simplified settings page: inputs removed. Admin UI is available via shortcode [quiz_admin]
         $opt = get_option($this->option_name, []);
         $rest = isset($opt['rest_base']) ? $opt['rest_base'] : 'quiz/v1';
+        // ensure settings script is enqueued and localized
+        $plugin_url = plugin_dir_url(__FILE__);
+        $plugin_path = plugin_dir_path(__FILE__);
+        wp_enqueue_script('quiz-buzzer-settings', $plugin_url . 'settings.js', [], filemtime($plugin_path . 'settings.js'));
+        wp_localize_script('quiz-buzzer-settings', 'QuizBuzzerSettings', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('quiz_buzzer_config'),
+            'config' => get_option('quiz_buzzer_config', null)
+        ]);
+
         ?>
         <div class="wrap">
             <h1>Quiz Buzzer Settings</h1>
-            <p>The settings inputs have been removed. Use the admin UI shortcode to manage teams and scoring.</p>
-            <p>Place the admin UI on any page using the shortcode: <code>[quiz_admin]</code></p>
+            <h2>Colours</h2>
+            <div id="colors-list"></div>
+            <p>
+                <input type="text" id="new-color-name" placeholder="Color name">
+                <input type="color" id="new-color-hex" value="#e53935">
+                <button id="add-color" class="button">Add colour</button>
+            </p>
+
+            <h2>Sounds</h2>
+            <div id="sounds-list"></div>
+            <p>
+                <input type="text" id="new-sound-name" placeholder="Sound name">
+                <input type="url" id="new-sound-url" placeholder="Sound URL (optional)" style="width:40%;">
+                <button id="add-sound" class="button">Add sound</button>
+            </p>
+
             <h2>Shortcodes</h2>
-            <ul>
-              <li><code>[quiz_buzzer]</code> — competitor/buzzer UI</li>
-              <li><code>[quiz_display]</code> — live display</li>
-              <li><code>[quiz_admin]</code> — admin panel (place on a page)</li>
-            </ul>
+            <p>Place the admin UI on any page using the shortcode: <code>[quiz_admin]</code></p>
+            <p>Competitor UI: <code>[quiz_buzzer]</code>, Display UI: <code>[quiz_display]</code></p>
             <p>Current REST base: <code><?php echo esc_html($rest); ?></code> (full URL: <?php echo esc_html(rest_url($rest . '/')); ?>)</p>
         </div>
         <?php
+    }
+
+    public function ajax_update_config() {
+        if (!current_user_can('manage_options')) wp_send_json_error('permission');
+        check_ajax_referer('quiz_buzzer_config', 'nonce');
+        $raw = file_get_contents('php://input');
+        $data = json_decode($raw, true);
+        if (!$data) wp_send_json_error('invalid');
+        update_option('quiz_buzzer_config', $data);
+        wp_send_json_success($data);
+    }
+
+    public function ajax_get_config() {
+        if (!current_user_can('manage_options')) wp_send_json_error('permission');
+        $config = get_option('quiz_buzzer_config', []);
+        wp_send_json_success($config);
     }
 
     // Shortcode that renders the admin UI on a front-end page (visible to admins)
@@ -200,10 +240,16 @@ class Quiz_Buzzer_Plugin {
             }
             $name = trim($input['name']);
             $color = strtolower(trim($input['color']));
-            $sound = trim($input['sound']);
+            // normalize sound: accept string or array/object
+            if (is_array($input['sound']) || is_object($input['sound'])) {
+                $sound = $input['sound'];
+            } else {
+                $sound = trim(strval($input['sound']));
+            }
             if ($name === '' || $color === '' ) return rest_ensure_response(['status'=>'error','msg'=>'Empty']);
             if (isset($data['teams'][$name])) return rest_ensure_response(['status'=>'error','msg'=>'Team name exists']);
             foreach ($data['teams'] as $n=>$i) if (strtolower($i['color']) === $color) return rest_ensure_response(['status'=>'error','msg'=>'Colour taken']);
+            // store sound as provided (string or object)
             $data['teams'][$name] = ['color'=>$color,'sound'=>$sound,'score'=>0];
             $this->save_state($data);
             return rest_ensure_response(['status'=>'ok']);
@@ -341,7 +387,8 @@ class Quiz_Buzzer_Plugin {
         $opt = get_option($this->option_name, []);
         $base = isset($opt['rest_base']) ? $opt['rest_base'] : 'quiz/v1';
         wp_localize_script('quiz-buzzer-public', 'QuizBuzzerConfig', [
-            'restBase' => rest_url($base . '/')
+            'restBase' => rest_url($base . '/'),
+            'config' => get_option('quiz_buzzer_config', null)
         ]);
         wp_localize_script('quiz-buzzer-display', 'QuizBuzzerConfig', [
             'restBase' => rest_url($base . '/')

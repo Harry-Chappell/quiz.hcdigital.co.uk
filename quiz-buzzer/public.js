@@ -4,7 +4,8 @@ const REST_BASE = (window.QuizBuzzerConfig && window.QuizBuzzerConfig.restBase) 
 // --- Session state ---
 let teamName  = sessionStorage.getItem("teamName")  || null;
 let teamColor = sessionStorage.getItem("teamColor") || null;
-let teamSound = sessionStorage.getItem("teamSound") || null;
+let teamSoundRaw = sessionStorage.getItem("teamSound") || null; // stored as JSON string when object
+let teamSound = null; // normalized object or null
 let lastResetTime = 0;
 
 // DOM refs
@@ -12,7 +13,7 @@ let loginScreen, buzzScreen, teamListEl, createForm, newTeamNameEl;
 let colourListEl, soundListEl, selectedColourEl, selectedSoundEl;
 let buzzBtn, buzzFeedbackEl, logoutBtn, teamInfoEl;
 
-const PALETTE = [
+const DEFAULT_PALETTE = [
   { label: "Red",    value: "#e53935" },
   { label: "Blue",   value: "#1e88e5" },
   { label: "Green",  value: "#43a047" },
@@ -23,7 +24,25 @@ const PALETTE = [
   { label: "Indigo", value: "#5e35b1" }
 ];
 
-const SOUNDS = ["Beep","Boop","Clap","Horn","Laser"];
+const DEFAULT_SOUNDS = ["Beep","Boop","Clap","Horn","Laser"];
+
+// use configured values when available
+const CONFIG = (window.QuizBuzzerConfig && window.QuizBuzzerConfig.config) ? window.QuizBuzzerConfig.config : null;
+
+// normalize sounds to objects: { name, url }
+function normalizeSound(s) {
+  if (!s) return { name: '', url: null };
+  if (typeof s === 'string') return { name: s, url: null };
+  if (typeof s === 'object') return { name: s.name || s.label || '', url: s.url || s.link || null };
+  return { name: String(s), url: null };
+}
+
+const PALETTE = (CONFIG && Array.isArray(CONFIG.colors) && CONFIG.colors.length)
+  ? CONFIG.colors.map(c => ({ label: c.name, value: c.hex }))
+  : DEFAULT_PALETTE;
+const SOUNDS = (CONFIG && Array.isArray(CONFIG.sounds) && CONFIG.sounds.length)
+  ? CONFIG.sounds.map(normalizeSound)
+  : DEFAULT_SOUNDS.map(name => ({ name, url: null }));
 const JUST_CREATED_GRACE_MS = 5000; // grace period after creating a team
 
 async function fetchTeams() {
@@ -57,8 +76,13 @@ function renderTeamList(teams) {
     btn.addEventListener('click', () => {
       sessionStorage.setItem('teamName', t.name);
       sessionStorage.setItem('teamColor', t.color);
-      sessionStorage.setItem('teamSound', t.sound || '');
-      teamName = t.name; teamColor = t.color; teamSound = t.sound || null;
+      // normalize incoming team.sound which may be string or object
+      let soundObj = null;
+      if (t.sound) {
+        soundObj = (typeof t.sound === 'string') ? { name: t.sound, url: null } : t.sound;
+      }
+      if (soundObj) sessionStorage.setItem('teamSound', JSON.stringify(soundObj)); else sessionStorage.removeItem('teamSound');
+      teamName = t.name; teamColor = t.color; teamSound = soundObj || null;
       showBuzzScreen();
     });
 
@@ -90,14 +114,19 @@ function renderColourOptions(teams) {
   if (createBtn) createBtn.disabled = [...colourListEl.querySelectorAll('li')].every(li => li.style.pointerEvents === 'none');
 }
 
+let selectedSoundObj = null;
 function renderSoundOptions() {
   soundListEl.innerHTML = '';
-  SOUNDS.forEach(s => {
+  SOUNDS.forEach((s, idx) => {
     const li = document.createElement('li');
-    li.textContent = s; li.dataset.value = s;
-    if (selectedSoundEl.value === s) li.classList.add('selected');
+    li.textContent = s.name;
+    li.dataset.idx = String(idx);
+    li.dataset.name = s.name;
+    if (s.url) li.title = s.url;
+    if (selectedSoundObj && selectedSoundObj.name === s.name) li.classList.add('selected');
     li.addEventListener('click', () => {
-      selectedSoundEl.value = s;
+      selectedSoundObj = s;
+      selectedSoundEl.value = s.name;
       document.querySelectorAll('#sound-list li').forEach(el => el.classList.remove('selected'));
       li.classList.add('selected');
     });
@@ -160,28 +189,54 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Missing expected DOM elements.'); return;
   }
 
+  // initialize teamSound from session storage and ensure selectedSoundObj reflects it
+  if (teamSoundRaw) {
+    try {
+      const parsed = JSON.parse(teamSoundRaw);
+      if (parsed && parsed.name) {
+        teamSound = parsed;
+        selectedSoundObj = parsed;
+        selectedSoundEl.value = parsed.name;
+      } else {
+        // fallback to string
+        teamSound = { name: String(teamSoundRaw), url: null };
+        selectedSoundEl.value = teamSound.name;
+      }
+    } catch (e) {
+      // not JSON, keep as string
+      teamSound = { name: String(teamSoundRaw), url: null };
+      selectedSoundEl.value = teamSound.name;
+    }
+  }
+
   createForm.addEventListener('submit', async (ev) => {
     ev.preventDefault();
     const name = newTeamNameEl.value.trim();
     const color = selectedColourEl.value; const sound = selectedSoundEl.value;
     if (!name || !color || !sound) return;
     try {
-      const res = await fetch(REST_BASE + 'register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name,color,sound}) });
+      // include sound object when available
+      const soundPayload = selectedSoundObj || (selectedSoundEl.value ? { name: selectedSoundEl.value, url: null } : null);
+      const res = await fetch(REST_BASE + 'register', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({name,color,sound: soundPayload}) });
       const data = await res.json();
       if (data.status !== 'ok') { alert(data.msg || 'Error creating team'); return; }
-      sessionStorage.setItem('teamName', name); sessionStorage.setItem('teamColor', color); sessionStorage.setItem('teamSound', sound);
-  // mark as just-created to avoid immediate "removed by admin" race
-  sessionStorage.setItem('justCreatedTeam', String(Date.now()));
-      teamName = name; teamColor = color; teamSound = sound; showBuzzScreen(); refreshLoginUI();
-  // clear the just-created marker after grace window
-  setTimeout(() => sessionStorage.removeItem('justCreatedTeam'), JUST_CREATED_GRACE_MS + 100);
+      // store the selected sound as JSON so we keep the URL if present
+      sessionStorage.setItem('teamName', name);
+      sessionStorage.setItem('teamColor', color);
+      if (soundPayload) sessionStorage.setItem('teamSound', JSON.stringify(soundPayload)); else sessionStorage.removeItem('teamSound');
+      // mark as just-created to avoid immediate "removed by admin" race
+      sessionStorage.setItem('justCreatedTeam', String(Date.now()));
+      teamName = name; teamColor = color; teamSound = soundPayload; showBuzzScreen(); refreshLoginUI();
+      // clear the just-created marker after grace window
+      setTimeout(() => sessionStorage.removeItem('justCreatedTeam'), JUST_CREATED_GRACE_MS + 100);
     } catch (err) { console.error('Create team error', err); alert('Error creating team'); }
   });
 
   buzzBtn.addEventListener('click', async () => {
     if (!teamName || !teamColor) return; buzzBtn.disabled = true;
     try {
-      const res = await fetch(REST_BASE + 'buzz', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name: teamName, color: teamColor, sound: teamSound }) });
+      const soundPayload = (teamSound && typeof teamSound === 'object') ? teamSound : (teamSound ? { name: String(teamSound), url: null } : null);
+      const res = await fetch(REST_BASE + 'buzz', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ name: teamName, color: teamColor, sound: soundPayload }) });
       const data = await res.json();
       buzzScreen.style.transition = 'background-color 0.15s';
       buzzScreen.style.backgroundColor = teamColor;
