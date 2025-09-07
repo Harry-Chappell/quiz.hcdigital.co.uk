@@ -413,10 +413,210 @@ public function quiz_wheel_display_shortcode($atts) {
     $fullWheelSegments = count($allCategories);
 
     ob_start(); ?>
+    <h2 id="selected-category">Spin the wheel!</h2>
     <div id="wheel-container" style="text-align:center;">
-        <h2 id="selected-category">Spin the wheel!</h2>
         <canvas id="quiz-wheel" width="400" height="400" style="touch-action: none;"></canvas>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="ticker"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
+        <div class="lights">
+            <div class="light"></div>
+            <div class="light"></div>
+        </div>
     </div>
+
+    <style>
+        div#wheel-container {
+            display: flex;
+            height: 400px;
+            width: 400px;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .lights {
+            min-width: 25px;
+            height: calc(100% + 50px);
+            display: inherit;
+            position: absolute;
+            width: 25px;
+            flex-direction: column;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+        .light {
+            background: hsl(50 100% 10% / 1);
+            box-shadow: none;
+            border-radius: 100%;
+            width: 100%;
+            aspect-ratio: 1;
+        }
+        /* .lights:nth-child(odd) .light {
+        }
+        .lights:nth-child(even) .light {
+            background: hsl(50 100% 50% / 1);
+            box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
+        } */
+        /* When the wheel canvas has the .spinning class, invert the lights every second */
+        #quiz-wheel.spinning ~ .lights:nth-child(odd) .light {
+            animation: lights-on 0.5s steps(1) infinite;
+        }
+        #quiz-wheel.spinning ~ .lights:nth-child(even) .light {
+            animation: lights-on-alt 0.5s steps(1) infinite;
+        }
+
+        @keyframes lights-on {
+            0% {
+                background: hsl(50 100% 10% / 1);
+                box-shadow: none;
+            }
+            50% {
+                background: hsl(50 100% 50% / 1);
+                box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
+            }
+            100% {
+                background: hsl(50 100% 10% / 1);
+                box-shadow: none;
+            }
+        }
+        @keyframes lights-on-alt {
+            0% {
+                background: hsl(50 100% 50% / 1);
+                box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
+            }
+            50% {
+                background: hsl(50 100% 10% / 1);
+                box-shadow: none;
+            }
+            100% {
+                background: hsl(50 100% 50% / 1);
+                box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
+            }
+        }
+        .lights:nth-child(1) {
+            rotate: 0deg;
+        }
+        .lights:nth-child(2) {
+            rotate: 11.25deg;
+        }
+        .lights:nth-child(3) {
+            rotate: 22.5deg;
+        }
+        .lights:nth-child(4) {
+            rotate: 33.75deg;
+        }
+        .lights:nth-child(5) {
+            rotate: 45deg;
+        }
+        .lights:nth-child(6) {
+            rotate: 56.25deg;
+        }
+        .lights:nth-child(7) {
+            rotate: 67.5deg;
+        }
+        .lights:nth-child(8) {
+            rotate: 78.75deg;
+        }
+        .lights:nth-child(9) {
+            rotate: 90deg;
+        }
+        .lights:nth-child(10) {
+            rotate: 101.25deg;
+        }
+        .lights:nth-child(11) {
+            rotate: 112.5deg;
+        }
+        .lights:nth-child(12) {
+            rotate: 123.75deg;
+        }
+        .lights:nth-child(13) {
+            rotate: 135deg;
+        }
+        .lights:nth-child(14) {
+            rotate: 146.25deg;
+        }
+        .lights:nth-child(15) {
+            rotate: 157.5deg;
+        }
+        .lights:nth-child(16) {
+            rotate: 168.75deg;
+        }
+        .lights:nth-child(17) {
+            rotate: 180deg;
+        }
+        .ticker {
+            box-shadow: none;
+            width: 0;
+            aspect-ratio: 1;
+            position: relative;
+            transform: translate(calc(-5px / 2), 0%);
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 50px solid hsl(240deg 100% 61.84%);
+            transform-origin: top;
+            transition: 0.05s;
+        }
+        .ticker.tick {
+            transform: translate(calc(-5px / 2), 0%) rotate(30deg);
+        }
+    </style>
 
     <script>
     (function(){
@@ -452,6 +652,13 @@ public function quiz_wheel_display_shortcode($atts) {
             if(!dingBuffer) return;
             const ding = dingBuffer.cloneNode();
             ding.play().catch(()=>{});
+
+            // 🎯 Trigger .tick class on .ticker element
+            const tickerEl = document.querySelector('.ticker');
+            if (tickerEl) {
+                tickerEl.classList.add('tick');
+                setTimeout(() => tickerEl.classList.remove('tick'), 150);
+            }
         }
 
         const maxRpm = 60;
