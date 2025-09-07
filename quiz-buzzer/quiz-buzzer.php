@@ -439,10 +439,9 @@ public function quiz_wheel_display_shortcode($atts) {
 
         let lastHighlightIndex = -1;
 
-        // === Preload audio for ding ===
+        // === Preload ding ===
         const dingSrc = "https://hcdigital.co.uk/dev/wp-content/uploads/2025/09/ding.m4a";
         let dingBuffer = null;
-
         const dingAudio = new Audio(dingSrc);
         dingAudio.preload = "auto";
         dingAudio.addEventListener("canplaythrough", () => {
@@ -552,6 +551,7 @@ public function quiz_wheel_display_shortcode($atts) {
                 firstSpin = false;
             }
 
+            canvas.classList.add('spinning'); // 🎯 add class
             requestAnimationFrame(animateSpin);
         }
 
@@ -559,6 +559,7 @@ public function quiz_wheel_display_shortcode($atts) {
             velocity *= 0.992; // friction
             if(Math.abs(velocity)<0.0003){
                 velocity = 0;
+                canvas.classList.remove('spinning'); // 🎯 remove class
                 const segments = wheelCategories.length;
                 const segmentAngle = 2*Math.PI / segments;
                 const highlightIndex = Math.floor((2*Math.PI - (angle % (2*Math.PI)))/segmentAngle) % segments;
