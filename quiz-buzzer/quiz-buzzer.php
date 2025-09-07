@@ -507,6 +507,7 @@ public function quiz_wheel_display_shortcode($atts) {
             border-radius: 100%;
             width: 100%;
             aspect-ratio: 1;
+            transition: 0.2s;
         }
         /* .lights:nth-child(odd) .light {
         }
@@ -640,26 +641,60 @@ public function quiz_wheel_display_shortcode($atts) {
         let lastHighlightIndex = -1;
 
         // === Preload ding ===
-        const dingSrc = "https://hcdigital.co.uk/dev/wp-content/uploads/2025/09/ding.m4a";
+        // === Audio setup for iOS compatibility ===
+        let audioCtx;
         let dingBuffer = null;
-        const dingAudio = new Audio(dingSrc);
-        dingAudio.preload = "auto";
-        dingAudio.addEventListener("canplaythrough", () => {
-            dingBuffer = dingAudio;
-        }, {once:true});
+        const dingUrl = "https://hcdigital.co.uk/dev/wp-content/uploads/2025/09/ding.mp3";
 
-        function playDing(){
-            if(!dingBuffer) return;
-            const ding = dingBuffer.cloneNode();
-            ding.play().catch(()=>{});
-
-            // 🎯 Trigger .tick class on .ticker element
-            const tickerEl = document.querySelector('.ticker');
-            if (tickerEl) {
-                tickerEl.classList.add('tick');
-                setTimeout(() => tickerEl.classList.remove('tick'), 150);
+        // Unlock + preload on first gesture
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
+            audioCtx.resume().then(() => {
+                if (!dingBuffer) {
+                    fetch(dingUrl)
+                        .then(res => res.arrayBuffer())
+                        .then(data => audioCtx.decodeAudioData(data))
+                        .then(buffer => { dingBuffer = buffer; })
+                        .catch(err => {
+                            console.warn("decodeAudioData failed:", err);
+                            // fallback: preload via <audio>
+                            dingBuffer = null;
+                        });
+                }
+            });
         }
+
+        // Play ding and animate ticker
+        function playDing(){
+            // Always animate ticker
+            const tickerEls = document.querySelectorAll('.ticker');
+            tickerEls.forEach(el => {
+                el.classList.add('tick');
+                setTimeout(() => el.classList.remove('tick'), 150);
+            });
+
+            if (audioCtx && dingBuffer) {
+                try {
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = dingBuffer;
+                    source.connect(audioCtx.destination);
+                    source.start(0);
+                    return;
+                } catch (e) {
+                    console.warn("WebAudio playback failed:", e);
+                }
+            }
+
+            // fallback: HTML5 Audio
+            const dingEl = new Audio(dingUrl);
+            dingEl.play().catch(()=>{});
+        }
+
+        // Attach unlock handler
+        window.addEventListener('touchstart', initAudio, { once: true });
+        window.addEventListener('mousedown', initAudio, { once: true });
 
         const maxRpm = 60;
         const maxVelocity = (2*Math.PI)*(maxRpm/60)/60;
