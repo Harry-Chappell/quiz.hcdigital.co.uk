@@ -28,6 +28,8 @@ class Quiz_Buzzer_Plugin {
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
         register_activation_hook(__FILE__, [$this, 'on_activate']);
 
+        add_shortcode('quiz_wheel_display', [$this, 'quiz_wheel_display_shortcode']);
+
         $upload = wp_upload_dir();
         $this->queue_file = trailingslashit($upload['basedir']) . 'quiz-queue.json';
     }
@@ -401,6 +403,159 @@ class Quiz_Buzzer_Plugin {
         wp_localize_script('quiz-buzzer-admin', 'QuizBuzzerConfig', [
             'restBase' => rest_url($base . '/')
         ]);
+    }
+
+
+    // Spinner
+    public function quiz_wheel_display_shortcode($atts) {
+        $allCategories = ['History','Science','Sports','Movies','Music','Geography','Art','General Knowledge'];
+        $fullWheelSegments = count($allCategories); // total slices
+
+        ob_start(); ?>
+        <div id="wheel-container" style="text-align:center;">
+            <h2 id="selected-category">Spin the wheel!</h2>
+            <canvas id="quiz-wheel" width="400" height="400" style="touch-action: none;"></canvas>
+        </div>
+
+        <script>
+        (function(){
+            const canvas = document.getElementById('quiz-wheel');
+            const ctx = canvas.getContext('2d');
+            const radius = canvas.width/2 - 10;
+
+            const allCategories = <?php echo json_encode($allCategories); ?>;
+            const fullWheelSegments = <?php echo $fullWheelSegments; ?>;
+
+            let usedCategories = [];
+            let wheelCategories = [...allCategories];
+            let firstSpin = true;
+            let spinStarted = false;
+
+            let angle = 0;
+            let velocity = 0;
+            let isDragging = false;
+            let lastY = 0;
+
+            const maxRpm = 60;
+            const maxVelocity = (2*Math.PI)*(maxRpm/60)/60;
+
+            function drawWheel() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
+                const segments = wheelCategories.length;
+                const segmentAngle = 2*Math.PI / segments;
+
+                let highlightIndex = spinStarted ? Math.floor((2*Math.PI - (angle % (2*Math.PI)))/segmentAngle) % segments : -1;
+
+                for(let i=0;i<segments;i++){
+                    if(i === highlightIndex){
+                        ctx.fillStyle = '#ff4444';
+                    } else {
+                        ctx.fillStyle = i%2===0 ? '#ffcc00':'#ff9900';
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(canvas.width/2,canvas.height/2);
+                    ctx.arc(canvas.width/2,canvas.height/2,radius,i*segmentAngle+angle,(i+1)*segmentAngle+angle);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.save();
+                    ctx.translate(canvas.width/2,canvas.height/2);
+                    ctx.rotate(i*segmentAngle+segmentAngle/2+angle);
+                    ctx.textAlign = "right";
+                    ctx.fillStyle = "#333";
+                    ctx.font = "16px sans-serif";
+                    ctx.fillText(wheelCategories[i],radius-10,0);
+                    ctx.restore();
+                }
+
+                if(highlightIndex>=0){
+                    document.getElementById('selected-category').innerText = wheelCategories[highlightIndex];
+                } else {
+                    document.getElementById('selected-category').innerText = "Spin the wheel!";
+                }
+            }
+
+            drawWheel();
+
+            function getY(e){
+                if(e.touches) e=e.touches[0];
+                return e.clientY;
+            }
+
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('touchstart', startDrag);
+            window.addEventListener('mousemove', drag);
+            window.addEventListener('touchmove', drag);
+            window.addEventListener('mouseup', release);
+            window.addEventListener('touchend', release);
+
+            function startDrag(e){
+                e.preventDefault();
+                isDragging = true;
+                lastY = getY(e);
+                spinStarted = true;
+            }
+
+            function drag(e){
+                if(!isDragging) return;
+                const y = getY(e);
+                let dy = y - lastY;
+                velocity = dy * 0.03;
+                if(velocity > maxVelocity) velocity = maxVelocity;
+                if(velocity < -maxVelocity) velocity = -maxVelocity;
+
+                angle += velocity;
+                lastY = y;
+                drawWheel();
+            }
+
+            function release(){
+                if(!isDragging) return;
+                isDragging = false;
+
+                if(!firstSpin){
+                    // Remove used categories from wheel
+                    let remaining = allCategories.filter(c => !usedCategories.includes(c));
+
+                    // Duplicate opposite slice
+                    const needed = fullWheelSegments - remaining.length;
+                    let newWheel = [...remaining];
+                    for(let i=0;i<needed;i++){
+                        if(remaining.length === 0) break;
+                        const oppositeIndex = Math.floor((i + Math.floor(remaining.length/2)) % remaining.length);
+                        newWheel.splice(i*2,0,remaining[oppositeIndex]);
+                    }
+                    wheelCategories = newWheel;
+                } else {
+                    firstSpin = false;
+                }
+
+                requestAnimationFrame(animateSpin);
+            }
+
+            function animateSpin(){
+                velocity *= 0.992; // friction
+                if(Math.abs(velocity)<0.0003){
+                    velocity = 0;
+                    // mark top category as used
+                    const segments = wheelCategories.length;
+                    const segmentAngle = 2*Math.PI / segments;
+                    const highlightIndex = Math.floor((2*Math.PI - (angle % (2*Math.PI)))/segmentAngle) % segments;
+                    const landed = wheelCategories[highlightIndex];
+                    if(!usedCategories.includes(landed)){
+                        usedCategories.push(landed);
+                    }
+                    drawWheel();
+                    return;
+                }
+                angle += velocity;
+                drawWheel();
+                requestAnimationFrame(animateSpin);
+            }
+        })();
+        </script>
+        <?php
+        return ob_get_clean();
     }
 }
 
