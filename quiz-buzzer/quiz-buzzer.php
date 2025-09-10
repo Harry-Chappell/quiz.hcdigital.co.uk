@@ -242,17 +242,31 @@ class Quiz_Buzzer_Plugin {
             }
             $name = trim($input['name']);
             $color = strtolower(trim($input['color']));
-            // normalize sound: accept string or array/object
-            if (is_array($input['sound']) || is_object($input['sound'])) {
-                $sound = $input['sound'];
-            } else {
-                $sound = trim(strval($input['sound']));
+            $sound = is_array($input['sound']) || is_object($input['sound']) 
+                ? $input['sound'] 
+                : trim(strval($input['sound']));
+
+            if ($name === '' || $color === '' ) {
+                return rest_ensure_response(['status'=>'error','msg'=>'Empty']);
             }
-            if ($name === '' || $color === '' ) return rest_ensure_response(['status'=>'error','msg'=>'Empty']);
-            if (isset($data['teams'][$name])) return rest_ensure_response(['status'=>'error','msg'=>'Team name exists']);
-            foreach ($data['teams'] as $n=>$i) if (strtolower($i['color']) === $color) return rest_ensure_response(['status'=>'error','msg'=>'Colour taken']);
-            // store sound as provided (string or object)
-            $data['teams'][$name] = ['color'=>$color,'sound'=>$sound,'score'=>0];
+            if (isset($data['teams'][$name])) {
+                return rest_ensure_response(['status'=>'error','msg'=>'Team name exists']);
+            }
+
+            foreach ($data['teams'] as $n=>$i) {
+                if (strtolower($i['color']) === $color) {
+                    return rest_ensure_response(['status'=>'error','msg'=>'Colour taken']);
+                }
+                if (!empty($i['sound']) && $i['sound'] === $sound) {
+                    return rest_ensure_response(['status'=>'error','msg'=>'Sound taken']);
+                }
+            }
+
+            $data['teams'][$name] = [
+                'color' => $color,
+                'sound' => $sound,
+                'score' => 0
+            ];
             $this->save_state($data);
             return rest_ensure_response(['status'=>'ok']);
         }
@@ -407,420 +421,419 @@ class Quiz_Buzzer_Plugin {
 
 
     // Spinner
-// Inside Quiz_Buzzer_Plugin class
-public function quiz_wheel_display_shortcode($atts) {
-    $allCategories = ['History','Science','Sports','Movies','Music','Geography','Art','General Knowledge'];
-    $fullWheelSegments = count($allCategories);
+    public function quiz_wheel_display_shortcode($atts) {
+        $allCategories = ['History','Science','Sports','Movies','Music','Geography','Art','General Knowledge'];
+        $fullWheelSegments = count($allCategories);
 
-    ob_start(); ?>
-    <h2 id="selected-category">Spin the wheel!</h2>
-    <div id="wheel-container" style="text-align:center;">
-        <canvas id="quiz-wheel" width="400" height="400" style="touch-action: none;"></canvas>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
+        ob_start(); ?>
+        <h2 id="selected-category">Spin the wheel!</h2>
+        <div id="wheel-container" style="text-align:center;">
+            <canvas id="quiz-wheel" width="400" height="400" style="touch-action: none;"></canvas>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="ticker"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
+            <div class="lights">
+                <div class="light"></div>
+                <div class="light"></div>
+            </div>
         </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="ticker"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-        <div class="lights">
-            <div class="light"></div>
-            <div class="light"></div>
-        </div>
-    </div>
 
-    <style>
-        div#wheel-container {
-            display: flex;
-            height: 400px;
-            width: 400px;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .lights {
-            min-width: 25px;
-            height: calc(100% + 50px);
-            display: inherit;
-            position: absolute;
-            width: 25px;
-            flex-direction: column;
-            justify-content: space-between;
-            pointer-events: none;
-        }
-        .light {
-            background: hsl(50 100% 10% / 1);
-            box-shadow: none;
-            border-radius: 100%;
-            width: 100%;
-            aspect-ratio: 1;
-            transition: 0.2s;
-        }
-        /* .lights:nth-child(odd) .light {
-        }
-        .lights:nth-child(even) .light {
-            background: hsl(50 100% 50% / 1);
-            box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
-        } */
-        /* When the wheel canvas has the .spinning class, invert the lights every second */
-        #quiz-wheel.spinning ~ .lights:nth-child(odd) .light {
-            animation: lights-on 0.5s steps(1) infinite;
-        }
-        #quiz-wheel.spinning ~ .lights:nth-child(even) .light {
-            animation: lights-on-alt 0.5s steps(1) infinite;
-        }
-
-        @keyframes lights-on {
-            0% {
+        <style>
+            div#wheel-container {
+                display: flex;
+                height: 400px;
+                width: 400px;
+                align-items: center;
+                justify-content: center;
+                position: relative;
+            }
+            .lights {
+                min-width: 25px;
+                height: calc(100% + 50px);
+                display: inherit;
+                position: absolute;
+                width: 25px;
+                flex-direction: column;
+                justify-content: space-between;
+                pointer-events: none;
+            }
+            .light {
                 background: hsl(50 100% 10% / 1);
                 box-shadow: none;
+                border-radius: 100%;
+                width: 100%;
+                aspect-ratio: 1;
+                transition: 0.2s;
             }
-            50% {
+            /* .lights:nth-child(odd) .light {
+            }
+            .lights:nth-child(even) .light {
                 background: hsl(50 100% 50% / 1);
                 box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
+            } */
+            /* When the wheel canvas has the .spinning class, invert the lights every second */
+            #quiz-wheel.spinning ~ .lights:nth-child(odd) .light {
+                animation: lights-on 0.5s steps(1) infinite;
             }
-            100% {
-                background: hsl(50 100% 10% / 1);
+            #quiz-wheel.spinning ~ .lights:nth-child(even) .light {
+                animation: lights-on-alt 0.5s steps(1) infinite;
+            }
+
+            @keyframes lights-on {
+                0% {
+                    background: hsl(50 100% 10% / 1);
+                    box-shadow: none;
+                }
+                50% {
+                    background: hsl(50 100% 50% / 1);
+                    box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
+                }
+                100% {
+                    background: hsl(50 100% 10% / 1);
+                    box-shadow: none;
+                }
+            }
+            @keyframes lights-on-alt {
+                0% {
+                    background: hsl(50 100% 50% / 1);
+                    box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
+                }
+                50% {
+                    background: hsl(50 100% 10% / 1);
+                    box-shadow: none;
+                }
+                100% {
+                    background: hsl(50 100% 50% / 1);
+                    box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
+                }
+            }
+            .lights:nth-child(1) {
+                rotate: 0deg;
+            }
+            .lights:nth-child(2) {
+                rotate: 11.25deg;
+            }
+            .lights:nth-child(3) {
+                rotate: 22.5deg;
+            }
+            .lights:nth-child(4) {
+                rotate: 33.75deg;
+            }
+            .lights:nth-child(5) {
+                rotate: 45deg;
+            }
+            .lights:nth-child(6) {
+                rotate: 56.25deg;
+            }
+            .lights:nth-child(7) {
+                rotate: 67.5deg;
+            }
+            .lights:nth-child(8) {
+                rotate: 78.75deg;
+            }
+            .lights:nth-child(9) {
+                rotate: 90deg;
+            }
+            .lights:nth-child(10) {
+                rotate: 101.25deg;
+            }
+            .lights:nth-child(11) {
+                rotate: 112.5deg;
+            }
+            .lights:nth-child(12) {
+                rotate: 123.75deg;
+            }
+            .lights:nth-child(13) {
+                rotate: 135deg;
+            }
+            .lights:nth-child(14) {
+                rotate: 146.25deg;
+            }
+            .lights:nth-child(15) {
+                rotate: 157.5deg;
+            }
+            .lights:nth-child(16) {
+                rotate: 168.75deg;
+            }
+            .lights:nth-child(17) {
+                rotate: 180deg;
+            }
+            .ticker {
                 box-shadow: none;
+                width: 0;
+                aspect-ratio: 1;
+                position: relative;
+                transform: translate(calc(-5px / 2), 0%);
+                border-left: 15px solid transparent;
+                border-right: 15px solid transparent;
+                border-top: 50px solid hsl(240deg 100% 61.84%);
+                transform-origin: top;
+                transition: 0.05s;
             }
-        }
-        @keyframes lights-on-alt {
-            0% {
-                background: hsl(50 100% 50% / 1);
-                box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
+            .ticker.tick {
+                transform: translate(calc(-5px / 2), 0%) rotate(30deg);
             }
-            50% {
-                background: hsl(50 100% 10% / 1);
-                box-shadow: none;
-            }
-            100% {
-                background: hsl(50 100% 50% / 1);
-                box-shadow: 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1), 0 0 10px hsl(50 100% 50% / 1);
-            }
-        }
-        .lights:nth-child(1) {
-            rotate: 0deg;
-        }
-        .lights:nth-child(2) {
-            rotate: 11.25deg;
-        }
-        .lights:nth-child(3) {
-            rotate: 22.5deg;
-        }
-        .lights:nth-child(4) {
-            rotate: 33.75deg;
-        }
-        .lights:nth-child(5) {
-            rotate: 45deg;
-        }
-        .lights:nth-child(6) {
-            rotate: 56.25deg;
-        }
-        .lights:nth-child(7) {
-            rotate: 67.5deg;
-        }
-        .lights:nth-child(8) {
-            rotate: 78.75deg;
-        }
-        .lights:nth-child(9) {
-            rotate: 90deg;
-        }
-        .lights:nth-child(10) {
-            rotate: 101.25deg;
-        }
-        .lights:nth-child(11) {
-            rotate: 112.5deg;
-        }
-        .lights:nth-child(12) {
-            rotate: 123.75deg;
-        }
-        .lights:nth-child(13) {
-            rotate: 135deg;
-        }
-        .lights:nth-child(14) {
-            rotate: 146.25deg;
-        }
-        .lights:nth-child(15) {
-            rotate: 157.5deg;
-        }
-        .lights:nth-child(16) {
-            rotate: 168.75deg;
-        }
-        .lights:nth-child(17) {
-            rotate: 180deg;
-        }
-        .ticker {
-            box-shadow: none;
-            width: 0;
-            aspect-ratio: 1;
-            position: relative;
-            transform: translate(calc(-5px / 2), 0%);
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-top: 50px solid hsl(240deg 100% 61.84%);
-            transform-origin: top;
-            transition: 0.05s;
-        }
-        .ticker.tick {
-            transform: translate(calc(-5px / 2), 0%) rotate(30deg);
-        }
-    </style>
+        </style>
 
-    <script>
-    (function(){
-        const canvas = document.getElementById('quiz-wheel');
-        const ctx = canvas.getContext('2d');
-        const radius = canvas.width/2 - 10;
+        <script>
+        (function(){
+            const canvas = document.getElementById('quiz-wheel');
+            const ctx = canvas.getContext('2d');
+            const radius = canvas.width/2 - 10;
 
-        const allCategories = <?php echo json_encode($allCategories); ?>;
-        const fullWheelSegments = <?php echo $fullWheelSegments; ?>;
+            const allCategories = <?php echo json_encode($allCategories); ?>;
+            const fullWheelSegments = <?php echo $fullWheelSegments; ?>;
 
-        let usedCategories = [];
-        let wheelCategories = [...allCategories];
-        let firstSpin = true;
-        let spinStarted = false;
+            let usedCategories = [];
+            let wheelCategories = [...allCategories];
+            let firstSpin = true;
+            let spinStarted = false;
 
-        let angle = 0;
-        let velocity = 0;
-        let isDragging = false;
-        let lastY = 0;
+            let angle = 0;
+            let velocity = 0;
+            let isDragging = false;
+            let lastY = 0;
 
-        let lastHighlightIndex = -1;
+            let lastHighlightIndex = -1;
 
-        // === Preload ding ===
-        // === Audio setup for iOS compatibility ===
-        let audioCtx;
-        let dingBuffer = null;
-        const dingUrl = "https://hcdigital.co.uk/dev/wp-content/uploads/2025/09/ding.mp3";
+            // === Preload ding ===
+            // === Audio setup for iOS compatibility ===
+            let audioCtx;
+            let dingBuffer = null;
+            const dingUrl = "https://hcdigital.co.uk/dev/wp-content/uploads/2025/09/ding.mp3";
 
-        // Unlock + preload on first gesture
-        function initAudio() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            audioCtx.resume().then(() => {
-                if (!dingBuffer) {
-                    fetch(dingUrl)
-                        .then(res => res.arrayBuffer())
-                        .then(data => audioCtx.decodeAudioData(data))
-                        .then(buffer => { dingBuffer = buffer; })
-                        .catch(err => {
-                            console.warn("decodeAudioData failed:", err);
-                            // fallback: preload via <audio>
-                            dingBuffer = null;
-                        });
+            // Unlock + preload on first gesture
+            function initAudio() {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 }
-            });
-        }
+                audioCtx.resume().then(() => {
+                    if (!dingBuffer) {
+                        fetch(dingUrl)
+                            .then(res => res.arrayBuffer())
+                            .then(data => audioCtx.decodeAudioData(data))
+                            .then(buffer => { dingBuffer = buffer; })
+                            .catch(err => {
+                                console.warn("decodeAudioData failed:", err);
+                                // fallback: preload via <audio>
+                                dingBuffer = null;
+                            });
+                    }
+                });
+            }
 
-        // Play ding and animate ticker
-        function playDing(){
-            // Always animate ticker
-            const tickerEls = document.querySelectorAll('.ticker');
-            tickerEls.forEach(el => {
-                el.classList.add('tick');
-                setTimeout(() => el.classList.remove('tick'), 150);
-            });
+            // Play ding and animate ticker
+            function playDing(){
+                // Always animate ticker
+                const tickerEls = document.querySelectorAll('.ticker');
+                tickerEls.forEach(el => {
+                    el.classList.add('tick');
+                    setTimeout(() => el.classList.remove('tick'), 150);
+                });
 
-            if (audioCtx && dingBuffer) {
-                try {
-                    const source = audioCtx.createBufferSource();
-                    source.buffer = dingBuffer;
-                    source.connect(audioCtx.destination);
-                    source.start(0);
-                    return;
-                } catch (e) {
-                    console.warn("WebAudio playback failed:", e);
+                if (audioCtx && dingBuffer) {
+                    try {
+                        const source = audioCtx.createBufferSource();
+                        source.buffer = dingBuffer;
+                        source.connect(audioCtx.destination);
+                        source.start(0);
+                        return;
+                    } catch (e) {
+                        console.warn("WebAudio playback failed:", e);
+                    }
                 }
+
+                // fallback: HTML5 Audio
+                const dingEl = new Audio(dingUrl);
+                dingEl.play().catch(()=>{});
             }
 
-            // fallback: HTML5 Audio
-            const dingEl = new Audio(dingUrl);
-            dingEl.play().catch(()=>{});
-        }
+            // Attach unlock handler
+            window.addEventListener('touchstart', initAudio, { once: true });
+            window.addEventListener('mousedown', initAudio, { once: true });
 
-        // Attach unlock handler
-        window.addEventListener('touchstart', initAudio, { once: true });
-        window.addEventListener('mousedown', initAudio, { once: true });
+            const maxRpm = 60;
+            const maxVelocity = (2*Math.PI)*(maxRpm/60)/60;
 
-        const maxRpm = 60;
-        const maxVelocity = (2*Math.PI)*(maxRpm/60)/60;
-
-        function drawWheel() {
-            ctx.clearRect(0,0,canvas.width,canvas.height);
-            const segments = wheelCategories.length;
-            const segmentAngle = 2*Math.PI / segments;
-
-            let highlightIndex = spinStarted ? Math.floor((2*Math.PI - (angle % (2*Math.PI)))/segmentAngle) % segments : -1;
-
-            // 🔔 Play ding when crossing into new segment
-            if(highlightIndex !== -1 && highlightIndex !== lastHighlightIndex){
-                playDing();
-                lastHighlightIndex = highlightIndex;
-            }
-
-            for(let i=0;i<segments;i++){
-                if(i === highlightIndex){
-                    ctx.fillStyle = '#ff4444';
-                } else {
-                    ctx.fillStyle = i%2===0 ? '#ffcc00':'#ff9900';
-                }
-                ctx.beginPath();
-                ctx.moveTo(canvas.width/2,canvas.height/2);
-                ctx.arc(canvas.width/2,canvas.height/2,radius,i*segmentAngle+angle,(i+1)*segmentAngle+angle);
-                ctx.fill();
-                ctx.stroke();
-
-                ctx.save();
-                ctx.translate(canvas.width/2,canvas.height/2);
-                ctx.rotate(i*segmentAngle+segmentAngle/2+angle);
-                ctx.textAlign = "right";
-                ctx.fillStyle = "#333";
-                ctx.font = "16px sans-serif";
-                ctx.fillText(wheelCategories[i],radius-10,0);
-                ctx.restore();
-            }
-
-            if(highlightIndex>=0){
-                document.getElementById('selected-category').innerText = wheelCategories[highlightIndex];
-            } else {
-                document.getElementById('selected-category').innerText = "Spin the wheel!";
-            }
-        }
-
-        drawWheel();
-
-        function getY(e){
-            if(e.touches) e=e.touches[0];
-            return e.clientY;
-        }
-
-        canvas.addEventListener('mousedown', startDrag);
-        canvas.addEventListener('touchstart', startDrag);
-        window.addEventListener('mousemove', drag);
-        window.addEventListener('touchmove', drag);
-        window.addEventListener('mouseup', release);
-        window.addEventListener('touchend', release);
-
-        function startDrag(e){
-            e.preventDefault();
-            isDragging = true;
-            lastY = getY(e);
-            spinStarted = true;
-        }
-
-        function drag(e){
-            if(!isDragging) return;
-            const y = getY(e);
-            let dy = y - lastY;
-            velocity = dy * 0.03;
-            if(velocity > maxVelocity) velocity = maxVelocity;
-            if(velocity < -maxVelocity) velocity = -maxVelocity;
-
-            angle += velocity;
-            lastY = y;
-            drawWheel();
-        }
-
-        function release(){
-            if(!isDragging) return;
-            isDragging = false;
-
-            if(!firstSpin){
-                let remaining = allCategories.filter(c => !usedCategories.includes(c));
-                const needed = fullWheelSegments - remaining.length;
-                let newWheel = [...remaining];
-                for(let i=0;i<needed;i++){
-                    if(remaining.length === 0) break;
-                    const oppositeIndex = Math.floor((i + Math.floor(remaining.length/2)) % remaining.length);
-                    newWheel.splice(i*2,0,remaining[oppositeIndex]);
-                }
-                wheelCategories = newWheel;
-            } else {
-                firstSpin = false;
-            }
-
-            canvas.classList.add('spinning'); // 🎯 add class
-            requestAnimationFrame(animateSpin);
-        }
-
-        function animateSpin(){
-            velocity *= 0.992; // friction
-            if(Math.abs(velocity)<0.0003){
-                velocity = 0;
-                canvas.classList.remove('spinning'); // 🎯 remove class
+            function drawWheel() {
+                ctx.clearRect(0,0,canvas.width,canvas.height);
                 const segments = wheelCategories.length;
                 const segmentAngle = 2*Math.PI / segments;
-                const highlightIndex = Math.floor((2*Math.PI - (angle % (2*Math.PI)))/segmentAngle) % segments;
-                const landed = wheelCategories[highlightIndex];
-                if(!usedCategories.includes(landed)){
-                    usedCategories.push(landed);
+
+                let highlightIndex = spinStarted ? Math.floor((2*Math.PI - (angle % (2*Math.PI)))/segmentAngle) % segments : -1;
+
+                // 🔔 Play ding when crossing into new segment
+                if(highlightIndex !== -1 && highlightIndex !== lastHighlightIndex){
+                    playDing();
+                    lastHighlightIndex = highlightIndex;
                 }
-                drawWheel();
-                return;
+
+                for(let i=0;i<segments;i++){
+                    if(i === highlightIndex){
+                        ctx.fillStyle = '#ff4444';
+                    } else {
+                        ctx.fillStyle = i%2===0 ? '#ffcc00':'#ff9900';
+                    }
+                    ctx.beginPath();
+                    ctx.moveTo(canvas.width/2,canvas.height/2);
+                    ctx.arc(canvas.width/2,canvas.height/2,radius,i*segmentAngle+angle,(i+1)*segmentAngle+angle);
+                    ctx.fill();
+                    ctx.stroke();
+
+                    ctx.save();
+                    ctx.translate(canvas.width/2,canvas.height/2);
+                    ctx.rotate(i*segmentAngle+segmentAngle/2+angle);
+                    ctx.textAlign = "right";
+                    ctx.fillStyle = "#333";
+                    ctx.font = "16px sans-serif";
+                    ctx.fillText(wheelCategories[i],radius-10,0);
+                    ctx.restore();
+                }
+
+                if(highlightIndex>=0){
+                    document.getElementById('selected-category').innerText = wheelCategories[highlightIndex];
+                } else {
+                    document.getElementById('selected-category').innerText = "Spin the wheel!";
+                }
             }
-            angle += velocity;
+
             drawWheel();
-            requestAnimationFrame(animateSpin);
-        }
-    })();
-    </script>
-    <?php
-    return ob_get_clean();
-}
+
+            function getY(e){
+                if(e.touches) e=e.touches[0];
+                return e.clientY;
+            }
+
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('touchstart', startDrag);
+            window.addEventListener('mousemove', drag);
+            window.addEventListener('touchmove', drag);
+            window.addEventListener('mouseup', release);
+            window.addEventListener('touchend', release);
+
+            function startDrag(e){
+                e.preventDefault();
+                isDragging = true;
+                lastY = getY(e);
+                spinStarted = true;
+            }
+
+            function drag(e){
+                if(!isDragging) return;
+                const y = getY(e);
+                let dy = y - lastY;
+                velocity = dy * 0.03;
+                if(velocity > maxVelocity) velocity = maxVelocity;
+                if(velocity < -maxVelocity) velocity = -maxVelocity;
+
+                angle += velocity;
+                lastY = y;
+                drawWheel();
+            }
+
+            function release(){
+                if(!isDragging) return;
+                isDragging = false;
+
+                if(!firstSpin){
+                    let remaining = allCategories.filter(c => !usedCategories.includes(c));
+                    const needed = fullWheelSegments - remaining.length;
+                    let newWheel = [...remaining];
+                    for(let i=0;i<needed;i++){
+                        if(remaining.length === 0) break;
+                        const oppositeIndex = Math.floor((i + Math.floor(remaining.length/2)) % remaining.length);
+                        newWheel.splice(i*2,0,remaining[oppositeIndex]);
+                    }
+                    wheelCategories = newWheel;
+                } else {
+                    firstSpin = false;
+                }
+
+                canvas.classList.add('spinning'); // 🎯 add class
+                requestAnimationFrame(animateSpin);
+            }
+
+            function animateSpin(){
+                velocity *= 0.992; // friction
+                if(Math.abs(velocity)<0.0003){
+                    velocity = 0;
+                    canvas.classList.remove('spinning'); // 🎯 remove class
+                    const segments = wheelCategories.length;
+                    const segmentAngle = 2*Math.PI / segments;
+                    const highlightIndex = Math.floor((2*Math.PI - (angle % (2*Math.PI)))/segmentAngle) % segments;
+                    const landed = wheelCategories[highlightIndex];
+                    if(!usedCategories.includes(landed)){
+                        usedCategories.push(landed);
+                    }
+                    drawWheel();
+                    return;
+                }
+                angle += velocity;
+                drawWheel();
+                requestAnimationFrame(animateSpin);
+            }
+        })();
+        </script>
+        <?php
+        return ob_get_clean();
+    }
 }
 
 new Quiz_Buzzer_Plugin();
